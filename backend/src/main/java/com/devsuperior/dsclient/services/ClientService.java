@@ -7,12 +7,17 @@ import java.util.stream.Collectors;
 import javax.persistence.EntityNotFoundException;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.EmptyResultDataAccessException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.devsuperior.dsclient.dto.ClientDTO;
 import com.devsuperior.dsclient.entities.Client;
 import com.devsuperior.dsclient.repositories.ClientRepository;
+import com.devsuperior.dsclient.services.exceptions.DatabaseException;
 import com.devsuperior.dsclient.services.exceptions.ResourceNotFoundException;
 
 @Service
@@ -22,11 +27,12 @@ public class ClientService {
 	private ClientRepository repository;
 	
 	@Transactional(readOnly = true)
-	public List<ClientDTO> findAll() {
-		List<Client> list = repository.findAll();
+	public Page<ClientDTO> findAllPaged(PageRequest pageRequest) {
+		Page<Client> list = repository.findAll(pageRequest);
+		return list.map(x -> new ClientDTO(x));
 		
-		// A linha abaixo é equivalente ao bloco de provessamento e return logo abaixo desta linha
-		return list.stream().map(x -> new ClientDTO(x)).collect(Collectors.toList());
+		// A linha abaixo é equivalente ao bloco de processamento e return logo abaixo desta linha
+		//return list.stream().map(x -> new ClientDTO(x)).collect(Collectors.toList());
 		
 		/*
 		List<ClientDTO> listDto = new ArrayList<>();
@@ -73,6 +79,19 @@ public class ClientService {
 		catch (EntityNotFoundException e) {
 			throw new ResourceNotFoundException("~Id not found: " + id);
 		}
+	}
+
+	public void delete(Long id) {
+		try {
+			repository.deleteById(id);
+		}
+		catch (EmptyResultDataAccessException e) {
+			throw new ResourceNotFoundException("Id not found: " + id);
+		}
+		catch (DataIntegrityViolationException e) {
+			throw new DatabaseException("Integrity violation!");
+		}
+		
 	}
 	
 }
